@@ -1,4 +1,4 @@
-package dk.rasmusbendix.redditchestpopulator.chunk;
+package dk.rasmusbendix.redditchestpopulator.restock;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.math.BlockVector3;
@@ -7,17 +7,18 @@ import com.sk89q.worldguard.protection.ApplicableRegionSet;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import dk.rasmusbendix.redditchestpopulator.ChestPopulatorPlugin;
-import dk.rasmusbendix.redditchestpopulator.CustomConfig;
 import dk.rasmusbendix.redditchestpopulator.chest.ChestTier;
+import dk.rasmusbendix.redditchestpopulator.tracking.ChestTracker;
 import org.bukkit.Location;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * If a player wants to have their player-placed chests become "world generated chests", they simply have to delete them
@@ -25,70 +26,19 @@ import java.util.*;
  * TODO: Allow players to make themselves as "builders" or similar, so chests they place wont get flagged as player-placed
  * */
 
-public class ChunkEvents implements Listener {
+public class ChestRestocker implements Listener {
 
     private final ChestPopulatorPlugin plugin;
-    private final CustomConfig chestConfig;
-    private final CustomConfig playerConfig;
-    private final List<Location> chests;
-    private Set<Location> chestLocations;
-    private Set<Location> playerChestLocations;
-    private int currentIndex = 0;
+    private final List<ChestTracker> chestTrackers;
 
-    public ChunkEvents(ChestPopulatorPlugin plugin) {
+    public ChestRestocker(ChestPopulatorPlugin plugin) {
         this.plugin = plugin;
-        this.chests = new ArrayList<>();
-        this.chestConfig = new CustomConfig("world-generated-chests");
-        this.playerConfig = new CustomConfig("player-placed-chests");
-        this.chestLocations = new HashSet<>();
-        this.playerChestLocations = new HashSet<>();
+        this.chestTrackers = new ArrayList<>();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        loadIgnoredChests();
     }
 
-    private void loadIgnoredChests() {
-        playerChestLocations = loadChestLocation(playerConfig);
-        chestLocations = loadChestLocation(chestConfig);
-    }
-
-    @SuppressWarnings("DataFlowIssue")
-    private Set<Location> loadChestLocation(CustomConfig config) {
-
-        Set<Location> locations = new HashSet<>();
-
-        if (!config.contains("ignored-chests")) {
-            plugin.getLogger().info("No ignored chests found in config!");
-            return locations;
-        }
-
-        for (String key : config.getConfig().getConfigurationSection("ignored-chests").getKeys(false)) {
-            locations.add(config.getConfig().getLocation("ignored-chests." + key));
-        }
-
-        plugin.getLogger().info(chestLocations.size() + " ignored chests was loaded.");
-        return locations;
-
-    }
-
-    public void saveIgnoredChests() {
-        saveChestLocations(chestConfig, chestLocations);
-        saveChestLocations(playerConfig, playerChestLocations);
-    }
-
-    private void saveChestLocations(CustomConfig config, Set<Location> locations) {
-        int i = 0;
-        for (Location loc : locations) {
-            config.set("ignored-chests." + i, loc);
-            i++;
-        }
-        config.saveConfig();
-    }
-
-    @EventHandler
-    public void playerPlaceChest(BlockPlaceEvent e) {
-        if (e.getBlockPlaced().getState() instanceof Chest chest) {
-            playerChestLocations.add(chest.getLocation());
-        }
+    public void addTracker(ChestTracker tracker) {
+        this.chestTrackers.add(tracker);
     }
 
     @EventHandler
@@ -106,7 +56,7 @@ public class ChunkEvents implements Listener {
         for (BlockState state : e.getChunk().getTileEntities()) {
             if (state instanceof Chest chest) {
 
-                if (!canBeRestocked(chest.getLocation())) {
+                if (!canBeRestocked(chest)) {
                     logIfMuchLogging("Skipped a chest!");
                     continue;
                 }
@@ -114,11 +64,20 @@ public class ChunkEvents implements Listener {
                 if (plugin.getConfig().getBoolean("settings.clear-chests-before-restock")) {
                     chest.getInventory().clear();
                 }
+
                 ChestTier tier = getChestTier(chest.getLocation());
-                tier.fillChest(chest, tier.generateLootTable());
+
+                ChestRestockEvent restockEvent = new ChestRestockEvent(chest, tier);
+                plugin.getServer().getPluginManager().callEvent(restockEvent);
+
+                if(restockEvent.isCancelled()) {
+                    logIfMuchLogging("Restock event was cancelled!");
+                    continue;
+                }
+
+                restockEvent.getTier().fillChest(restockEvent.getChest(), restockEvent.getGeneratedLoot());
                 count++;
-                chests.add(chest.getLocation());
-                chestLocations.add(chest.getLocation());
+
             }
         }
 
@@ -128,15 +87,16 @@ public class ChunkEvents implements Listener {
 
     }
 
-    public Location nextChestLocation() {
-        Location loc = chests.get(currentIndex);
-        currentIndex++;
-        return loc;
-    }
-
     private ChestTier getChestTier(Location location) {
-        RegionManager manager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(location.getWorld()));
+
         ChestTier tier = plugin.getTierManager().getDefault();
+
+        if(location.getWorld() == null) {
+            plugin.getLogger().warning("The world for location " + location + " is null!");
+            return tier;
+        }
+
+        RegionManager manager = WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(location.getWorld()));
 
         if (manager == null) {
             plugin.getLogger().warning("Failed to find region manager for world " + location.getWorld());
@@ -157,8 +117,13 @@ public class ChunkEvents implements Listener {
 
     }
 
-    public boolean canBeRestocked(Location location) {
-        return !playerChestLocations.contains(location) && !chestLocations.contains(location);
+    public boolean canBeRestocked(Chest chest) {
+        for(ChestTracker tracker : chestTrackers) {
+            if(!tracker.canRestockChest(chest)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void logIfMuchLogging(String message) {

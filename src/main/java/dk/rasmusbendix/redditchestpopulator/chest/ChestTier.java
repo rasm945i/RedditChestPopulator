@@ -8,10 +8,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class ChestTier {
 
@@ -57,7 +54,7 @@ public class ChestTier {
         String path = "tiers." + identifier.toString();
         config.set(path + ".region-prefix", this.regionPrefix);
         config.set(path + ".prevent-empty", this.preventEmpty);
-//        config.set(path + ".content", null);
+        config.set(path + ".content", null);
         int index = 0;
         for (ItemStack stack : lootTable.keySet()) {
             config.set(path + ".content." + index + ".item", stack);
@@ -92,7 +89,7 @@ public class ChestTier {
         return list;
     }
 
-    public void fillChest(Chest chest, ArrayList<ItemStack> loot) {
+    public void fillChest(Chest chest, List<ItemStack> loot) {
 
         for(ItemStack stack : loot) {
             int slot = getNextValidSlot(chest.getInventory());

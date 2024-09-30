@@ -11,27 +11,31 @@ import java.util.logging.Level;
 public class CustomConfig {
 
     @Setter private static JavaPlugin plugin;
-    private String filename;
+    private final String filename;
 
-    private File configFile;
+    private final File configFile;
     private FileConfiguration config;
 
-    // Used to create actual custom configs
     public CustomConfig(String filename, String folderName) {
+        this(filename, folderName, plugin);
+    }
+
+    // Used to create actual custom configs
+    public CustomConfig(String filename, String folderName, JavaPlugin javaPlugin) {
         // Make sure it ends with .yml, but don't duplicate stuff
         this.filename = filename.endsWith(".yml") ? filename : filename + ".yml";
 
-        File df = plugin.getDataFolder();
+        File df = javaPlugin.getDataFolder();
         if(df == null) {
             throw new IllegalStateException("Datafolder not found! Attempted to create " + this.filename);
         }
 
-        if(!folderName.equals("")) {
+        if(!folderName.isEmpty()) {
 
             File folder = new File(df.toString() + File.separatorChar + folderName);
             if(!folder.exists()) {
                 if(!folder.mkdirs())
-                    plugin.getLogger().warning("Failed to make directory: " + folderName);
+                    javaPlugin.getLogger().warning("Failed to make directory: " + folderName);
             }
 
             this.configFile = new File(df.toString() + File.separatorChar + folderName + File.separatorChar + this.filename);
@@ -39,10 +43,10 @@ public class CustomConfig {
             try {
 
                 if(configFile.createNewFile())
-                    plugin.getLogger().info("Created config file.");
+                    javaPlugin.getLogger().info("Created config file.");
 
             } catch(IOException e) {
-                plugin.getLogger().info("Failed to create config file.");
+                javaPlugin.getLogger().info("Failed to create config file.");
                 e.printStackTrace();
             }
 
