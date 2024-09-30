@@ -1,0 +1,13 @@
+settings:
+  # Whether to put items in to chests. I recommend setting "false" while setting up regions.
+  populate-chests: false
+  # Should chests get cleared (of potential old loot) before being restocked?
+  clear-chests-before-restock: true
+  # If true, logs information about how many chests are restocked or skipped
+  much-logging: true
+message:
+  no-permission: "You don't have permission to use this command!"
+  specify-tier: "Specify the tier you wish to test"
+  look-at-chest: "You must look at a chest to use this test command"
+  tier-not-found: "The tier you specified was not found"
+  test-chest-filled: "Filled the chest you're looking at with the tier you specified!"

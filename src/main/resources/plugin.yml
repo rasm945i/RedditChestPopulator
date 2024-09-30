@@ -1,0 +1,12 @@
+name: ChestPopulator
+main: dk.rasmusbendix.redditchestpopulator.ChestPopulatorPlugin
+version: 1.0
+depend: [WorldGuard]
+api-version: 1.13
+commands:
+  testtier:
+    description: Test loot generation for a given chest tier
+  addchesttier:
+    description: Add a chest-tier based on your current inventory content
+  regiontest:
+    description: Put some sticks in all chests found
