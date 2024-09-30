@@ -22,9 +22,9 @@ import java.util.Optional;
 
 /**
  * If a player wants to have their player-placed chests become "world generated chests", they simply have to delete them
- *  from the player-placed-chests.yml file. This way they will get restocked once, and then marked as a world-chest
+ * from the player-placed-chests.yml file. This way they will get restocked once, and then marked as a world-chest
  * TODO: Allow players to make themselves as "builders" or similar, so chests they place wont get flagged as player-placed
- * */
+ */
 
 public class ChestRestocker implements Listener {
 
@@ -54,31 +54,32 @@ public class ChestRestocker implements Listener {
 
         int count = 0;
         for (BlockState state : e.getChunk().getTileEntities()) {
-            if (state instanceof Chest chest) {
 
-                if (!canBeRestocked(chest)) {
-                    logIfMuchLogging("Skipped a chest!");
-                    continue;
-                }
-
-                if (plugin.getConfig().getBoolean("settings.clear-chests-before-restock")) {
-                    chest.getInventory().clear();
-                }
-
-                ChestTier tier = getChestTier(chest.getLocation());
-
-                ChestRestockEvent restockEvent = new ChestRestockEvent(chest, tier);
-                plugin.getServer().getPluginManager().callEvent(restockEvent);
-
-                if(restockEvent.isCancelled()) {
-                    logIfMuchLogging("Restock event was cancelled!");
-                    continue;
-                }
-
-                restockEvent.getTier().fillChest(restockEvent.getChest(), restockEvent.getGeneratedLoot());
-                count++;
-
+            if (!(state instanceof Chest chest)) {
+                continue;
             }
+
+            if (!canBeRestocked(chest)) {
+                logIfMuchLogging("Skipped a chest!");
+                continue;
+            }
+
+            ChestTier tier = getChestTier(chest.getLocation());
+            ChestRestockEvent restockEvent = new ChestRestockEvent(chest, tier);
+            plugin.getServer().getPluginManager().callEvent(restockEvent);
+
+            if (restockEvent.isCancelled()) {
+                logIfMuchLogging("Restock event was cancelled!");
+                continue;
+            }
+
+            if (plugin.getConfig().getBoolean("settings.clear-chests-before-restock")) {
+                chest.getInventory().clear();
+            }
+
+            restockEvent.getTier().fillChest(restockEvent.getChest(), restockEvent.getGeneratedLoot());
+            count++;
+
         }
 
         if (count > 0) {
@@ -91,7 +92,7 @@ public class ChestRestocker implements Listener {
 
         ChestTier tier = plugin.getTierManager().getDefault();
 
-        if(location.getWorld() == null) {
+        if (location.getWorld() == null) {
             plugin.getLogger().warning("The world for location " + location + " is null!");
             return tier;
         }
@@ -118,8 +119,8 @@ public class ChestRestocker implements Listener {
     }
 
     public boolean canBeRestocked(Chest chest) {
-        for(ChestTracker tracker : chestTrackers) {
-            if(!tracker.canRestockChest(chest)) {
+        for (ChestTracker tracker : chestTrackers) {
+            if (!tracker.canRestockChest(chest)) {
                 return false;
             }
         }
@@ -127,7 +128,7 @@ public class ChestRestocker implements Listener {
     }
 
     private void logIfMuchLogging(String message) {
-        if(plugin.getConfig().getBoolean("settings.much-logging")) {
+        if (plugin.getConfig().getBoolean("settings.much-logging")) {
             plugin.getLogger().info(message);
         }
     }

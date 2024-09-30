@@ -20,12 +20,10 @@ public class AddTierCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        if(!(sender instanceof Player)) {
+        if(!(sender instanceof Player player)) {
             sender.sendMessage("Only players can execute this command!");
             return true;
         }
-
-        Player player = (Player) sender;
 
         if(!player.hasPermission("chestfiller.addtier")) {
             plugin.sendMessage(player, "no-permission");
