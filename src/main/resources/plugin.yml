@@ -1,4 +1,4 @@
-name: ChestPopulator
+name: ChestFiller
 main: dk.rasmusbendix.redditchestpopulator.ChestPopulatorPlugin
 version: 1.0
 depend: [WorldGuard]
