@@ -5,8 +5,8 @@
 - Chests outside of regions receive nothing, or whatever is specified in the "default" tier.
 
 # Commands
-- `/addchesttier [tier-prefix] <prevent-empty true|false>` - Add a chest-tier. If `true` is passed as second argument, it will ensure that type of chest-tier will not be empty.<br>If the chest receives no generated loot, a random (not weighted) item from the loot table will be picked.
-
+- `/addchesttier [tier-prefix] <prevent-empty true|false>` - `chestfiller.addtier` - Add a chest-tier. If `true` is passed as second argument, it will ensure that type of chest-tier will not be empty.<br>If the chest receives no generated loot, a random (not weighted) item from the loot table will be picked.
+- `/testtier [region-name]` - `chestfiller.testtier` - Look at a chest and fill it as if it was in the region passed in `region-name` parameter.
 # How it works
 When a chunk is loaded, no matter how, all TileEntities are fetched to find all chests.  
 Each chest is iterated to check what region it is in.  
